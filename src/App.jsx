@@ -19,7 +19,7 @@ const QUESTIONS_DATA = [
     id: 3,
     category: "Comunicación Interprocesos",
     question: "¿Cuál es la diferencia principal entre usar hilos (threads) y fork()?",
-    answer: "Los hilos son más rápidos porque no duplican recursos, pero son totalmente dependientes; si el proceso padre termina, todos sus hilos también terminan."
+    answer: "Los hilos son más rápidos porque no duplican recursos sino que los comparten, pero son dependientes; si el proceso (o su hilo principal) termina, todos los hilos secundarios también terminan."
   },
   {
     id: 4,
