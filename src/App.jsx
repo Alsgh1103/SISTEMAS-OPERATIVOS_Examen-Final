@@ -433,7 +433,7 @@ export default function App() {
       },
       generationConfig: {
         responseMimeType: "application/json",
-        maxOutputTokens: 250, // Limita la cantidad máxima de tokens de respuesta
+        // maxOutputTokens eliminado temporalmente para evitar que el JSON se corte
         responseSchema: {
           type: "OBJECT",
           properties: {
