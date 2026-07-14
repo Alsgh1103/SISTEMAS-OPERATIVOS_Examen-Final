@@ -403,13 +403,13 @@ export default function App() {
     }
   };
 
-  // === CONSULTA A LA IA (GEMINI 2.5 FLASH) ===
+  // === CONSULTA A LA IA (GEMINI 1.5 FLASH 8B - LITE) ===
   const handleAIEvaluation = async () => {
     setLoadingAI(true);
     setAiFeedback(null);
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent`;
 
     const systemPrompt = `Eres un profesor experto y ultra constructivo de Sistemas Operativos. 
     Analiza la respuesta del usuario y compárala con la respuesta correcta provista de manera conceptual y técnica. No te fijes únicamente en coincidencias literales de palabras, sino en si el usuario comprende verdaderamente el concepto.
