@@ -229,6 +229,9 @@ const QUESTIONS_DATA = [
   }
 ];
 
+// === CATEGORÍAS DISPONIBLES ===
+const UNIQUE_CATEGORIES = [...new Set(QUESTIONS_DATA.map(q => q.category))];
+
 // === PALABRAS NO SIGNIFICATIVAS EN ESPAÑOL ===
 const STOP_WORDS = new Set([
   'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'en', 'y', 'o',
@@ -278,6 +281,7 @@ export default function App() {
   // === ESTADOS GENERALES ===
   const [currentTab, setCurrentTab] = useState('practice'); // 'practice', 'flashcards', 'list'
   const [darkMode, setDarkMode] = useState(true);
+  const [selectedCategories, setSelectedCategories] = useState(UNIQUE_CATEGORIES);
   
   // === ESTADOS DEL SIMULADOR ===
   const [questions, setQuestions] = useState([]);
@@ -297,7 +301,17 @@ export default function App() {
 
   // === INICIALIZACIÓN Y MEZCLA ===
   const startNewTest = () => {
-    const shuffled = [...QUESTIONS_DATA].sort(() => Math.random() - 0.5);
+    let filteredData = QUESTIONS_DATA;
+    if (selectedCategories.length > 0) {
+      filteredData = QUESTIONS_DATA.filter(q => selectedCategories.includes(q.category));
+    }
+    
+    if (filteredData.length === 0) {
+      triggerNotification("⚠️ Selecciona al menos un bloque de temas para empezar.");
+      return;
+    }
+
+    const shuffled = [...filteredData].sort(() => Math.random() - 0.5);
     setQuestions(shuffled);
     setCurrentIndex(0);
     setUserAnswer('');
@@ -306,6 +320,15 @@ export default function App() {
     setSessionScores({});
     triggerNotification("🚀 ¡Test reiniciado con orden aleatorio!");
   };
+
+  const filteredQuestionsData = useMemo(() => {
+    if (selectedCategories.length === 0) return [];
+    return QUESTIONS_DATA.filter(q => selectedCategories.includes(q.category));
+  }, [selectedCategories]);
+
+  useEffect(() => {
+    setFlashcardIndex(0);
+  }, [selectedCategories]);
 
   useEffect(() => {
     startNewTest();
@@ -566,7 +589,7 @@ export default function App() {
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              <span>📋 Balotario completo ({QUESTIONS_DATA.length})</span>
+              <span>📋 Balotario completo ({filteredQuestionsData.length})</span>
             </button>
           </div>
 
@@ -592,6 +615,62 @@ export default function App() {
 
       {/* CONTENEDOR PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 py-8">
+
+        {/* FILTROS DE TEMAS */}
+        <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 mb-8">
+          <h3 className="text-sm font-bold text-zinc-300 mb-3 flex items-center">
+            <span>🏷️ Filtrar por Bloques de Temas</span>
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {UNIQUE_CATEGORIES.map(cat => {
+              const isSelected = selectedCategories.includes(cat);
+              return (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setSelectedCategories(prev => 
+                      isSelected 
+                        ? prev.filter(c => c !== cat)
+                        : [...prev, cat]
+                    );
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex items-center space-x-2 ${
+                    isSelected 
+                      ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300' 
+                      : 'bg-zinc-800/50 border-zinc-700 text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-zinc-500 bg-zinc-900'}`}>
+                    {isSelected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <span>{cat}</span>
+                </button>
+              );
+            })}
+            <button
+              onClick={() => {
+                if (selectedCategories.length === UNIQUE_CATEGORIES.length) {
+                  setSelectedCategories([]);
+                } else {
+                  setSelectedCategories(UNIQUE_CATEGORIES);
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors ml-2"
+            >
+              {selectedCategories.length === UNIQUE_CATEGORIES.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+            </button>
+          </div>
+          {currentTab === 'practice' && (
+            <div className="mt-4 flex justify-end">
+               <button
+                  onClick={startNewTest}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center space-x-2"
+               >
+                 <span>🔄 Aplicar y Reiniciar Test</span>
+               </button>
+            </div>
+          )}
+        </div>
         
         {/* ======================================= */}
         {/* MODO PRÁCTICA / EXAMEN                  */}
@@ -933,7 +1012,12 @@ export default function App() {
         {/* ======================================= */}
         {/* MODO FLASHCARDS                         */}
         {/* ======================================= */}
-        {currentTab === 'flashcards' && (
+        {currentTab === 'flashcards' && filteredQuestionsData.length === 0 && (
+          <div className="text-center py-12 text-zinc-400">
+            Selecciona al menos un bloque de temas para ver las flashcards.
+          </div>
+        )}
+        {currentTab === 'flashcards' && filteredQuestionsData.length > 0 && (
           <div className="max-w-2xl mx-auto space-y-8 py-4">
             
             <div className="text-center space-y-2">
@@ -952,14 +1036,14 @@ export default function App() {
                 <div className="absolute w-full h-full p-8 rounded-3xl bg-zinc-900 border-2 border-zinc-800 flex flex-col justify-between backface-hidden">
                   <div className="flex items-center justify-between">
                     <span className="px-3.5 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-xs font-bold border border-indigo-500/20 uppercase tracking-wider">
-                      🎯 {QUESTIONS_DATA[flashcardIndex].category}
+                      🎯 {filteredQuestionsData[flashcardIndex]?.category}
                     </span>
-                    <span className="text-xs text-zinc-500 font-mono">Pregunta {flashcardIndex + 1} de {QUESTIONS_DATA.length}</span>
+                    <span className="text-xs text-zinc-500 font-mono">Pregunta {flashcardIndex + 1} de {filteredQuestionsData.length}</span>
                   </div>
 
                   <div className="text-center my-auto space-y-4">
                     <h3 className="text-xl md:text-2xl font-black leading-snug text-white">
-                      {QUESTIONS_DATA[flashcardIndex].question}
+                      {filteredQuestionsData[flashcardIndex]?.question}
                     </h3>
                     <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest animate-pulse">
                       Pulse la tarjeta para dar la vuelta 🔄
@@ -969,7 +1053,7 @@ export default function App() {
                   <div className="w-full bg-zinc-950 rounded-full h-1.5 overflow-hidden">
                     <div 
                       className="bg-indigo-500 h-1.5 rounded-full" 
-                      style={{ width: `${((flashcardIndex + 1) / QUESTIONS_DATA.length) * 100}%` }}
+                      style={{ width: `${((flashcardIndex + 1) / filteredQuestionsData.length) * 100}%` }}
                     ></div>
                   </div>
                 </div>
@@ -980,12 +1064,12 @@ export default function App() {
                     <span className="px-3.5 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-xs font-bold border border-indigo-500/20 uppercase tracking-wider">
                       💡 Solución correcta
                     </span>
-                    <span className="text-xs text-zinc-400 font-mono">Pregunta {flashcardIndex + 1} de {QUESTIONS_DATA.length}</span>
+                    <span className="text-xs text-zinc-400 font-mono">Pregunta {flashcardIndex + 1} de {filteredQuestionsData.length}</span>
                   </div>
 
                   <div className="text-center my-auto px-2">
                     <p className="text-sm md:text-base leading-relaxed text-zinc-100 font-medium">
-                      {QUESTIONS_DATA[flashcardIndex].answer}
+                      {filteredQuestionsData[flashcardIndex]?.answer}
                     </p>
                   </div>
 
@@ -1002,7 +1086,7 @@ export default function App() {
               <button
                 onClick={() => {
                   setFlipped(false);
-                  setFlashcardIndex(prev => (prev === 0 ? QUESTIONS_DATA.length - 1 : prev - 1));
+                  setFlashcardIndex(prev => (prev === 0 ? filteredQuestionsData.length - 1 : prev - 1));
                 }}
                 className="px-5 py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 rounded-xl font-bold transition-all"
               >
@@ -1013,7 +1097,7 @@ export default function App() {
                 onClick={() => {
                   setFlipped(false);
                   // Mezclar una aleatoria
-                  const randomIndex = Math.floor(Math.random() * QUESTIONS_DATA.length);
+                  const randomIndex = Math.floor(Math.random() * filteredQuestionsData.length);
                   setFlashcardIndex(randomIndex);
                   triggerNotification("🎲 Tarjeta aleatoria seleccionada");
                 }}
@@ -1025,7 +1109,7 @@ export default function App() {
               <button
                 onClick={() => {
                   setFlipped(false);
-                  setFlashcardIndex(prev => (prev === QUESTIONS_DATA.length - 1 ? 0 : prev + 1));
+                  setFlashcardIndex(prev => (prev === filteredQuestionsData.length - 1 ? 0 : prev + 1));
                 }}
                 className="px-5 py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 rounded-xl font-bold transition-all"
               >
@@ -1039,7 +1123,12 @@ export default function App() {
         {/* ======================================= */}
         {/* BALOTARIO COMPLETO                      */}
         {/* ======================================= */}
-        {currentTab === 'list' && (
+        {currentTab === 'list' && filteredQuestionsData.length === 0 && (
+          <div className="text-center py-12 text-zinc-400">
+            Selecciona al menos un bloque de temas para ver el balotario.
+          </div>
+        )}
+        {currentTab === 'list' && filteredQuestionsData.length > 0 && (
           <div className="space-y-8">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">📋 Balotario Oficial Completo de Sistemas Operativos</h2>
@@ -1047,8 +1136,10 @@ export default function App() {
             </div>
 
             {/* Clasificación en módulos */}
-            {["Comunicación Interprocesos", "Sistema de Archivos", "Bases de Datos e Índices", "Virtualización y E/S", "Redes, Seguridad y Distribuidos"].map((category) => {
-              const matchedQuestions = QUESTIONS_DATA.filter(q => q.category === category);
+            {UNIQUE_CATEGORIES.map((category) => {
+              if (!selectedCategories.includes(category)) return null;
+              const matchedQuestions = filteredQuestionsData.filter(q => q.category === category);
+              if (matchedQuestions.length === 0) return null;
               return (
                 <div key={category} className="space-y-4">
                   <h3 className="text-lg font-black text-indigo-400 border-b border-zinc-800 pb-2 flex items-center space-x-2">
